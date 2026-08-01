@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Calculadora de Casacas Pro v74 Mobile Nav y Borrar</title>
+  <title>Calculadora de Casacas Pro v76 Mobile Responsive</title>
   <style>
     :root{
       --bg:#f5f5f7;
@@ -556,6 +556,19 @@ body.dark .cloud-status.err{color:#ffb4ad}
     .login-fields{display:grid;gap:10px;margin-top:14px}
     .login-card .actions{margin-top:14px}
     .login-card .btn{width:100%;min-height:44px}
+    .password-field{position:relative}
+    .password-field input{padding-right:44px}
+    .password-toggle{
+      position:absolute;right:6px;bottom:4px;width:34px;height:32px;border:0;border-radius:10px;
+      background:transparent;color:var(--muted);cursor:pointer;display:grid;place-items:center;padding:0
+    }
+    .password-toggle:hover{color:var(--text);background:rgba(0,0,0,.04)}
+    .password-toggle:focus-visible{outline:2px solid rgba(0,113,227,.35);outline-offset:1px}
+    .password-toggle svg{width:18px;height:18px;display:block}
+    .password-toggle .eye-off{display:none}
+    .password-toggle.is-visible .eye-on{display:none}
+    .password-toggle.is-visible .eye-off{display:block}
+    body.dark .password-toggle:hover{background:rgba(255,255,255,.06)}
     .gate-status{margin-top:14px;padding:10px 12px;border-radius:16px;background:#f2f2f7;color:var(--muted);font-size:13px;line-height:1.35}
     .gate-status.ok{background:var(--green-soft);color:#167d3f}.gate-status.warn{background:#fff7de;color:#9a6700}.gate-status.err{background:#fff1f0;color:#b42318}
     .login-foot{margin-top:12px;font-size:12px;color:var(--muted);text-align:center}
@@ -744,7 +757,30 @@ body.dark .cloud-status.err{color:#ffb4ad}
 
     /* v38: Importación fija en historial */
     .history-track-box{display:grid;gap:5px}
-    .history-track-input{width:100%;min-height:38px !important;border:1px solid var(--line) !important;border-radius:12px !important;background:var(--card-solid) !important;color:var(--text) !important;padding:8px 10px !important;font-size:12px !important}
+    .history-track-controls{display:grid;gap:6px}
+    .history-track-field{position:relative}
+    .history-track-input{width:100%;min-height:38px !important;border:1px solid var(--line) !important;border-radius:12px !important;background:var(--card-solid) !important;color:var(--text) !important;padding:8px 42px 8px 10px !important;font-size:12px !important}
+    .history-track-copy{
+      position:absolute;right:5px;top:50%;transform:translateY(-50%);width:32px;height:30px;border:0;border-radius:10px;
+      background:transparent;color:var(--muted);cursor:pointer;display:grid;place-items:center;padding:0
+    }
+    .history-track-copy:hover{color:var(--text);background:rgba(0,0,0,.05)}
+    .history-track-copy:focus-visible{outline:2px solid rgba(0,113,227,.35);outline-offset:1px}
+    .history-track-copy svg{width:16px;height:16px;display:block}
+    body.dark .history-track-copy:hover{background:rgba(255,255,255,.08)}
+    .history-track-actions{display:flex;gap:6px;flex-wrap:wrap}
+    .history-track-actions .btn{flex:1 1 calc(50% - 3px);min-height:34px;border-radius:12px}
+    .history-track-actions .open-17track{
+      background:#0071e3 !important;color:#fff !important;border:1px solid #0071e3 !important
+    }
+    .history-track-actions .open-17track:hover{background:#0060c2 !important;border-color:#0060c2 !important}
+    .history-track-actions .open-correo-arg{
+      background:#ffcc00 !important;color:#5c4500 !important;border:1px solid #e6b800 !important;font-weight:800
+    }
+    .history-track-actions .open-correo-arg:hover{background:#f0c000 !important;border-color:#d4a900 !important}
+    body.dark .history-track-actions .open-17track{background:#0a84ff !important;border-color:#0a84ff !important;color:#fff !important}
+    body.dark .history-track-actions .open-17track:hover{background:#2997ff !important;border-color:#2997ff !important}
+    body.dark .history-track-actions .open-correo-arg{background:#ffd60a !important;border-color:#e6c009 !important;color:#3d2e00 !important}
     .history-import-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:stretch}
     .history-import-check{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:12px;background:var(--card-solid);padding:9px 10px;min-height:38px;font-size:12px;font-weight:800;color:var(--text)}
     .history-import-check input{width:16px;height:16px;accent-color:var(--green)}
@@ -788,7 +824,7 @@ body.dark .cloud-status.err{color:#ffb4ad}
   --hig-shadow-soft:0 4px 16px rgba(15,23,42,.06);
   color-scheme:light;
 }
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;scrollbar-gutter:stable;overflow-y:scroll}
 body{
   background:
     radial-gradient(circle at 14% 6%,rgba(10,132,255,.16),transparent 30rem),
@@ -1179,7 +1215,16 @@ body.dark .btn-secondary,body.dark .btn-ghost,body.dark .theme-toggle{
       <p>Para entrar, primero iniciá sesión. Después se carga tu nube y recién ahí tenés acceso a toda la calculadora.</p>
       <div class="login-fields">
         <div><label>Email</label><input id="gateEmail" type="email" autocomplete="username" placeholder="tu mail"></div>
-        <div><label>Contraseña</label><input id="gatePassword" type="password" autocomplete="current-password" placeholder="tu contraseña"></div>
+        <div>
+          <label for="gatePassword">Contraseña</label>
+          <div class="password-field">
+            <input id="gatePassword" type="password" autocomplete="current-password" placeholder="tu contraseña">
+            <button type="button" class="password-toggle" data-password-toggle="gatePassword" aria-label="Mostrar contraseña" title="Mostrar contraseña">
+              <svg class="eye-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-7-11-7a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+          </div>
+        </div>
       </div>
       <div class="actions">
         <button id="gateLoginBtn" class="btn btn-primary" type="button">Iniciar sesión</button>
@@ -1276,7 +1321,16 @@ body.dark .btn-secondary,body.dark .btn-ghost,body.dark .theme-toggle{
             <div id="cloudUserPill" class="cloud-user-pill" style="display:none"></div>
             <div id="cloudAuthForm" class="grid">
               <div class="span2"><label>Email</label><input id="cloudEmail" type="email" autocomplete="username" placeholder="tu mail"></div>
-              <div class="span2"><label>Contraseña</label><input id="cloudPassword" type="password" autocomplete="current-password" placeholder="tu contraseña"></div>
+              <div class="span2">
+                <label for="cloudPassword">Contraseña</label>
+                <div class="password-field">
+                  <input id="cloudPassword" type="password" autocomplete="current-password" placeholder="tu contraseña">
+                  <button type="button" class="password-toggle" data-password-toggle="cloudPassword" aria-label="Mostrar contraseña" title="Mostrar contraseña">
+                    <svg class="eye-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg class="eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-7-11-7a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  </button>
+                </div>
+              </div>
             </div>
             <div class="actions">
               <button id="cloudLoginBtn" class="btn btn-primary" type="button">Iniciar sesión</button>
@@ -2277,10 +2331,10 @@ function bindPatchModalEvents(){
 
 function renderCatalog(){
   $('catalogBody').innerHTML=catalog.length ? catalog.map((p,i)=>`<tr>
-    <td><input value="${esc(p.name)}" data-cat="${i}" data-field="name" data-old-name="${esc(p.name)}" placeholder="Nombre del producto"></td>
-    <td><input type="number" step="0.01" value="${p.price}" data-cat="${i}" data-field="price" placeholder="0"></td>
-    <td><input type="number" step="0.01" value="${p.margin}" data-cat="${i}" data-field="margin" placeholder="0"></td>
-    <td class="right"><button class="btn btn-danger btn-mini delete-cat" data-cat-delete="${i}">Borrar</button></td>
+    <td data-label="Producto"><input value="${esc(p.name)}" data-cat="${i}" data-field="name" data-old-name="${esc(p.name)}" placeholder="Nombre del producto"></td>
+    <td data-label="Precio base USD"><input type="number" step="0.01" value="${p.price}" data-cat="${i}" data-field="price" placeholder="0" inputmode="decimal"></td>
+    <td data-label="Ganancia %"><input type="number" step="0.01" value="${p.margin}" data-cat="${i}" data-field="margin" placeholder="0" inputmode="decimal"></td>
+    <td class="right" data-label="Acciones"><button class="btn btn-danger btn-mini delete-cat" data-cat-delete="${i}">Borrar</button></td>
   </tr>`).join('') : '<tr><td colspan="4" class="muted">Catálogo vacío. Tocá “+ Producto al catálogo” para cargar el primer producto.</td></tr>';
   document.querySelectorAll('[data-cat][data-field]').forEach(el=>el.oninput=e=>{
     const i=Number(e.target.dataset.cat), f=e.target.dataset.field;
@@ -2775,8 +2829,27 @@ function historyStatusSelect(h){
   const status=normalizeHistoryStatus(h.status);
   return `<select class="history-status-select" data-id="${esc(h.id)}">${HISTORY_STATUSES.map(([v,l])=>`<option value="${v}" ${status===v?'selected':''}>${l}</option>`).join('')}</select>`;
 }
+function history17TrackUrl(code){
+  return 'https://t.17track.net/es#nums='+encodeURIComponent(clean(code||''));
+}
+function historyTrackingCodeFromUi(id, el){
+  const root=el?.closest('.history-track-controls') || el?.closest('.history-track-box') || el?.closest('td');
+  const input=root?.querySelector('.history-track-input') || document.querySelector(`.history-track-input[data-id="${String(id||'').replace(/"/g,'')}"]`);
+  return clean(input?.value || historyList().find(x=>x.id===id)?.trackingCode || '');
+}
 function historyTrackingInput(h){
-  return `<input class="history-track-input" data-id="${esc(h.id)}" value="${esc(h.trackingCode||'')}" placeholder="Código de seguimiento">`;
+  return `<div class="history-track-controls">
+    <div class="history-track-field">
+      <input class="history-track-input" data-id="${esc(h.id)}" value="${esc(h.trackingCode||'')}" placeholder="Código de seguimiento">
+      <button type="button" class="history-track-copy copy-tracking" data-id="${esc(h.id)}" aria-label="Copiar código de seguimiento" title="Copiar código">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      </button>
+    </div>
+    <div class="history-track-actions">
+      <button type="button" class="btn btn-secondary btn-mini open-17track" data-id="${esc(h.id)}" title="Abrir en 17TRACK">Abrir en 17TRACK</button>
+      <button type="button" class="btn btn-ghost btn-mini open-correo-arg" title="Abrir Correo Argentino">Correo Arg.</button>
+    </div>
+  </div>`;
 }
 function historyImportPaymentControls(h){
   const checked=historyImportPaid(h)?'checked':'';
@@ -2831,7 +2904,7 @@ function renderHistory(){
       <td class="right"><b>${ars(h.totalRevenue||0)}</b></td>
       <td class="right"><b>${ars(h.totalProfitArs||0)}</b><br><span class="muted">${usd(h.totalProfitUsd||0)}</span></td>
       <td>${esc(people||'-')}</td>
-      <td class="right"><div class="history-actions"><button class="btn btn-secondary btn-mini view-history" data-id="${h.id}">Ver</button><button class="btn btn-secondary btn-mini load-history" data-id="${h.id}">Cargar</button><button class="btn btn-ghost btn-mini duplicate-history" data-id="${h.id}">Duplicar</button><button class="btn btn-ghost btn-mini copy-history" data-id="${h.id}">Copiar</button><button class="btn btn-danger btn-mini delete-history" data-id="${h.id}">Borrar</button></div></td>
+      <td class="right"><div class="history-actions"><button class="btn btn-secondary btn-mini view-history" data-id="${h.id}">Ver</button><button class="btn btn-secondary btn-mini load-history" data-id="${h.id}">Cargar</button><button class="btn btn-ghost btn-mini duplicate-history" data-id="${h.id}">Duplicar</button><button class="btn btn-danger btn-mini delete-history" data-id="${h.id}">Borrar</button></div></td>
     </tr>`;
   }).join('');
   cards.innerHTML=list.map(h=>{
@@ -2882,7 +2955,6 @@ function renderHistory(){
           <button class="btn btn-secondary btn-mini view-history" data-id="${h.id}">Ver detalle</button>
           <button class="btn btn-secondary btn-mini load-history" data-id="${h.id}">Cargar</button>
           <button class="btn btn-ghost btn-mini duplicate-history" data-id="${h.id}">Duplicar</button>
-          <button class="btn btn-ghost btn-mini copy-history" data-id="${h.id}">Copiar</button>
           <button class="btn btn-danger btn-mini delete-history" data-id="${h.id}">Borrar</button>
         </div>
       </div>
@@ -2913,6 +2985,24 @@ function bindHistoryEvents(){
     };
     inp.onblur=inp.onchange;
   });
+  document.querySelectorAll('.copy-tracking').forEach(b=>b.onclick=async()=>{
+    const code=historyTrackingCodeFromUi(b.dataset.id, b);
+    if(!code) return showToast('No hay código de seguimiento para copiar.');
+    try{
+      await navigator.clipboard.writeText(code);
+      showToast('Código de seguimiento copiado.');
+    }catch(e){
+      showToast('No pude copiar el código.');
+    }
+  });
+  document.querySelectorAll('.open-17track').forEach(b=>b.onclick=()=>{
+    const code=historyTrackingCodeFromUi(b.dataset.id, b);
+    if(!code) return showToast('Ingresá un código de seguimiento primero.');
+    window.open(history17TrackUrl(code), '_blank', 'noopener,noreferrer');
+  });
+  document.querySelectorAll('.open-correo-arg').forEach(b=>b.onclick=()=>{
+    window.open('https://epago.correoargentino.com.ar/#/login', '_blank', 'noopener,noreferrer');
+  });
   document.querySelectorAll('.history-import-paid-check').forEach(ch=>ch.onchange=()=>{
     const id=ch.dataset.id;
     updateHistoryEntry(id,h=>{ h.importPaymentDone=!!ch.checked; return h; });
@@ -2935,20 +3025,6 @@ function bindHistoryEvents(){
     await deleteHistoryPhotos(id);
     saveHistoryList(historyList().filter(x=>x.id!==id));
     renderHistory();
-  });
-  document.querySelectorAll('.copy-history').forEach(b=>b.onclick=()=>{
-    const h=historyList().find(x=>x.id===b.dataset.id);
-    if(!h) return;
-    const txt=`${h.label}
-Estado: ${historyStatusLabel(h.status)}
-Productos: ${h.items}
-Total: ${ars(h.totalRevenue||0)}
-Tracking: ${h.trackingCode||'-'}
-Importación fija: ${ars(historyImportAmount(h))}
-Declaración + Correo pagado: ${historyImportPaid(h)?'Sí':'No'}
-Ganancia ARS: ${ars(h.totalProfitArs||0)}
-Personas: ${(h.people||[]).join(', ')}`;
-    navigator.clipboard.writeText(txt).then(()=>showToast('Resumen del pedido copiado.'));
   });
 }
 async function openHistoryDetail(id){
@@ -3344,6 +3420,21 @@ async function loadCloudState(showMessage=false){
     cloudLoading=false;
   }
 }
+function bindPasswordToggles(){
+  document.querySelectorAll('[data-password-toggle]').forEach(btn=>{
+    if(btn.dataset.bound==='1') return;
+    btn.dataset.bound='1';
+    btn.addEventListener('click',()=>{
+      const input=$(btn.getAttribute('data-password-toggle'));
+      if(!input) return;
+      const show=input.type==='password';
+      input.type=show?'text':'password';
+      btn.classList.toggle('is-visible', show);
+      btn.setAttribute('aria-label', show?'Ocultar contraseña':'Mostrar contraseña');
+      btn.title=show?'Ocultar contraseña':'Mostrar contraseña';
+    });
+  });
+}
 function bindCloudEvents(){
   if($('cloudLoginBtn')) $('cloudLoginBtn').onclick=()=>cloudLogin('cloud');
   if($('cloudLogoutBtn')) $('cloudLogoutBtn').onclick=cloudLogout;
@@ -3351,6 +3442,7 @@ function bindCloudEvents(){
   if($('cloudLoadBtn')) $('cloudLoadBtn').onclick=()=>loadCloudState(true);
   if($('gateLoginBtn')) $('gateLoginBtn').onclick=()=>cloudLogin('gate');
   ['gateEmail','gatePassword'].forEach(id=>{ if($(id)) $(id).addEventListener('keydown',e=>{ if(e.key==='Enter') cloudLogin('gate'); }); });
+  bindPasswordToggles();
   setPersistence(auth,browserLocalPersistence).catch(()=>{});
   onAuthStateChanged(auth,async(user)=>{
     currentCloudUser=user;
@@ -5773,6 +5865,375 @@ body.dark #historyDetailModal .history-pay-box small{
   }
   #pedido .mobile-switch-row > label.switch em{
     display:none !important;
+  }
+}
+</style>
+
+
+<style id="v76-mobile-responsive-global">
+/* v76: responsive global — corrige layouts desktop !important y hace usable toda la app en celular */
+@media (max-width:900px){
+  html,body{
+    width:100% !important;
+    max-width:100% !important;
+    overflow-x:hidden !important;
+  }
+  .app{
+    width:100% !important;
+    max-width:100% !important;
+    padding:10px 10px calc(24px + env(safe-area-inset-bottom)) !important;
+    margin:0 !important;
+    box-sizing:border-box !important;
+  }
+
+  /* El override de 380px+1fr de v59 rompía Configuración en celular */
+  .grid-main{
+    display:flex !important;
+    flex-direction:column !important;
+    gap:12px !important;
+    grid-template-columns:1fr !important;
+  }
+  .grid-main > aside,
+  .grid-main > main,
+  .grid-main > .stack{
+    width:100% !important;
+    min-width:0 !important;
+    max-width:100% !important;
+  }
+
+  .grid{
+    grid-template-columns:1fr 1fr !important;
+    gap:10px !important;
+  }
+  .grid .span2,
+  #configuracion .grid > .span2,
+  #impuestos .grid > .span2{
+    grid-column:1 / -1 !important;
+  }
+
+  input,select,textarea,.btn,.icon-btn{
+    font-size:16px !important; /* evita zoom automático en iOS */
+  }
+  input,select,textarea{
+    min-height:44px !important;
+    border-radius:12px !important;
+  }
+  .btn{
+    min-height:44px !important;
+    border-radius:14px !important;
+  }
+
+  /* Pedido: cards táctiles, sin tabla ancha */
+  #pedido .order-table-shell,
+  #pedido .table-shell.order-table-shell{
+    display:none !important;
+  }
+  #pedido .mobile-order-list{
+    display:flex !important;
+    flex-direction:column !important;
+    gap:12px !important;
+    width:100% !important;
+  }
+  #pedido .v59-order-card,
+  #pedido main.card{
+    padding:0 !important;
+    overflow:visible !important;
+  }
+  #pedido .v59-order-header{
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:12px !important;
+    margin:4px 0 12px !important;
+  }
+  #pedido .v59-order-header h2{
+    font-size:28px !important;
+  }
+  #pedido .v59-order-header .sub{
+    font-size:13px !important;
+  }
+  #pedido .v59-order-actions{
+    width:100% !important;
+    display:grid !important;
+    grid-template-columns:1fr 1fr !important;
+    gap:8px !important;
+  }
+  #pedido .v59-order-actions .btn{
+    width:100% !important;
+    min-width:0 !important;
+  }
+  #pedido .v59-order-actions #addRowBtn{
+    grid-column:1 / -1 !important;
+  }
+  #pedido .v59-order-actions #saveHistoryBtn,
+  #pedido .v59-order-actions #clearBtn{
+    grid-column:auto !important;
+  }
+  #pedido .v59-order-meta{
+    flex-direction:column !important;
+    align-items:flex-start !important;
+    gap:6px !important;
+  }
+  #pedido .pedido-kpi-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    gap:8px !important;
+    margin-bottom:14px !important;
+  }
+  #pedido .pedido-kpi-grid .metric{
+    height:auto !important;
+    min-height:76px !important;
+    padding:12px 10px !important;
+  }
+  #pedido .pedido-kpi-grid .metric strong{
+    font-size:20px !important;
+  }
+  #pedido .pedido-kpi-grid .metric small{
+    font-size:9px !important;
+  }
+
+  /* Configuración / Impuestos */
+  #configuracion .card,
+  #impuestos .card,
+  #catalogo.panel,
+  #whatsapp.panel,
+  #talles.panel,
+  #historial.panel{
+    padding:14px !important;
+    border-radius:18px !important;
+  }
+  #configuracion .actions,
+  #impuestos .actions{
+    display:flex !important;
+    flex-wrap:wrap !important;
+    gap:8px !important;
+  }
+  #configuracion .actions .btn,
+  #impuestos .actions .btn{
+    flex:1 1 calc(50% - 8px) !important;
+    min-width:0 !important;
+  }
+  #configuracion .cloud-card .actions .btn{
+    flex:1 1 100% !important;
+  }
+
+  /* Productos: tabla → cards apiladas */
+  #catalogo .table-shell{
+    overflow:visible !important;
+    border:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+  }
+  #catalogo table,
+  #catalogo thead,
+  #catalogo tbody,
+  #catalogo tr,
+  #catalogo th,
+  #catalogo td{
+    display:block !important;
+    width:100% !important;
+  }
+  #catalogo thead{display:none !important;}
+  #catalogo tbody{
+    display:flex !important;
+    flex-direction:column !important;
+    gap:10px !important;
+  }
+  #catalogo tbody tr{
+    border:1px solid var(--v59-border-soft, var(--line)) !important;
+    border-radius:16px !important;
+    background:var(--v59-bg, var(--card-solid)) !important;
+    padding:12px !important;
+    box-sizing:border-box !important;
+  }
+  #catalogo tbody td{
+    border:0 !important;
+    padding:0 0 10px !important;
+    background:transparent !important;
+  }
+  #catalogo tbody td:last-child{padding-bottom:0 !important;}
+  #catalogo tbody td::before{
+    content:attr(data-label);
+    display:block;
+    font-size:10px;
+    font-weight:800;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:5px;
+  }
+  #catalogo tbody td[data-label="Acciones"]::before{display:none;}
+  #catalogo tbody td.right{
+    text-align:left !important;
+  }
+  #catalogo tbody td .btn{
+    width:100% !important;
+  }
+  #catalogo .actions{
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    gap:8px !important;
+    margin-top:12px !important;
+  }
+  #catalogo .actions .btn{width:100% !important;}
+
+  /* Historial */
+  #historial .history-head{
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:12px !important;
+  }
+  #historial .history-head h2{font-size:24px !important;}
+  #historial .history-head-actions{
+    width:100% !important;
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    gap:8px !important;
+  }
+  #historial .history-head-actions .btn{width:100% !important;}
+  #historial .history-stats{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    gap:8px !important;
+  }
+  #historial .history-toolbar{
+    grid-template-columns:1fr !important;
+    padding:10px !important;
+  }
+  #historial .history-card{
+    grid-template-columns:1fr !important;
+  }
+  #historial .history-card-side{
+    border-left:0 !important;
+    border-top:1px solid var(--line-soft) !important;
+  }
+  #historial .history-money-grid{
+    grid-template-columns:1fr 1fr !important;
+  }
+  #historial .history-import-row{
+    grid-template-columns:1fr !important;
+  }
+  #historial .history-import-check,
+  #historial .history-import-fixed{
+    height:auto !important;
+    min-height:52px !important;
+  }
+  #historial .history-actions{
+    display:grid !important;
+    grid-template-columns:1fr 1fr !important;
+    gap:8px !important;
+    flex-wrap:wrap !important;
+  }
+  #historial .history-actions .btn{
+    width:100% !important;
+    min-height:44px !important;
+    white-space:normal !important;
+    font-size:13px !important;
+  }
+  #historial .history-actions .view-history,
+  #historial .history-actions .delete-history{
+    grid-column:auto !important;
+  }
+  #historial .history-table-shell{display:none !important;}
+
+  /* WhatsApp */
+  #whatsapp .whatsapp-tools,
+  #whatsapp .whatsapp-list{
+    grid-template-columns:1fr !important;
+  }
+  #whatsapp .whatsapp-tools .actions{
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    gap:8px !important;
+    width:100% !important;
+  }
+  #whatsapp .whatsapp-tools .actions .btn,
+  #whatsapp .wa-card .actions .btn{
+    width:100% !important;
+    min-height:44px !important;
+  }
+  #whatsapp .wa-card .actions{
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    gap:8px !important;
+  }
+  #whatsapp .wa-photo-box{height:200px !important;}
+
+  /* Guía de talles: scroll horizontal táctil limpio */
+  #talles .size-guide-tabs{
+    display:flex !important;
+    flex-wrap:nowrap !important;
+    overflow-x:auto !important;
+    -webkit-overflow-scrolling:touch !important;
+    gap:8px !important;
+    padding-bottom:4px !important;
+    scrollbar-width:none !important;
+  }
+  #talles .size-guide-tabs::-webkit-scrollbar{display:none !important;}
+  #talles .size-guide-tab{
+    flex:0 0 auto !important;
+    min-height:40px !important;
+    white-space:nowrap !important;
+  }
+  #talles .size-table-shell{
+    overflow-x:auto !important;
+    -webkit-overflow-scrolling:touch !important;
+    border-radius:14px !important;
+  }
+  #talles .size-table{
+    min-width:640px !important;
+  }
+
+  /* Modales */
+  .modal-backdrop{
+    padding:0 !important;
+    align-items:flex-end !important;
+  }
+  .modal-card:not(.history-detail-modal){
+    width:100% !important;
+    max-width:100% !important;
+    max-height:92dvh !important;
+    border-radius:22px 22px 0 0 !important;
+    margin:0 !important;
+  }
+  .patch-choice,
+  .custom-patch-row{
+    grid-template-columns:1fr !important;
+  }
+  .patch-price-box input,
+  .patch-delete-btn{
+    width:100% !important;
+  }
+
+  /* Login */
+  .login-gate{padding:12px !important;}
+  .login-card{
+    width:100% !important;
+    max-width:100% !important;
+    padding:18px 16px !important;
+    border-radius:20px !important;
+  }
+}
+
+@media (max-width:480px){
+  #pedido .v59-order-actions{
+    grid-template-columns:1fr !important;
+  }
+  #pedido .pedido-kpi-grid .metric strong{font-size:18px !important;}
+  #historial .history-stats{grid-template-columns:1fr 1fr !important;}
+  #historial .history-money-grid{grid-template-columns:1fr !important;}
+  #historial .history-actions{grid-template-columns:1fr !important;}
+  .grid{grid-template-columns:1fr !important;}
+  .grid .span2{grid-column:auto !important;}
+  #configuracion .actions .btn,
+  #impuestos .actions .btn{
+    flex:1 1 100% !important;
+  }
+}
+
+/* Scrollbars táctiles en tablas que sí necesitan ancho */
+@media (max-width:900px){
+  .table-shell:not(.order-table-shell){
+    overflow-x:auto !important;
+    -webkit-overflow-scrolling:touch !important;
   }
 }
 </style>
