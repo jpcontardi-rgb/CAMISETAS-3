@@ -78,6 +78,10 @@
     .btn-danger{background:#fff1f0;color:#b42318;border:1px solid #ffd5d2}
     .btn-ghost{background:rgba(255,255,255,.9);border:1px solid var(--line);color:var(--text)}
     .btn-mini{padding:7px 10px;font-size:12px}
+    .rate-field{display:flex;gap:8px;align-items:stretch}
+    .rate-field input{flex:1;min-width:0}
+    .rate-field .btn{flex:0 0 auto;min-height:40px;white-space:nowrap;padding:8px 12px}
+    .rate-hint{display:block;margin-top:6px;font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.02em;text-transform:none}
 
     .table-shell{overflow:auto;border:1px solid var(--line-soft);border-radius:24px;background:rgba(255,255,255,.84)}
     table{border-collapse:separate;border-spacing:0;width:100%}
@@ -1305,7 +1309,14 @@ body.dark .btn-secondary,body.dark .btn-ghost,body.dark .theme-toggle{
             <h2>Configuración rápida</h2>
             <p class="sub">Dólar, envío, redondeo e IVA. Estos valores afectan el pedido actual.</p>
             <div class="grid">
-              <div><label>Dólar venta</label><input id="officialRate" type="number" step="0.01" value="0"></div>
+              <div class="span2">
+                <label>Dólar venta</label>
+                <div class="rate-field">
+                  <input id="officialRate" type="number" step="1" value="0">
+                  <button id="refreshOfficialRateBtn" class="btn btn-secondary btn-mini" type="button" title="Actualizar con el dólar oficial venta del momento">Actualizar</button>
+                </div>
+                <small id="officialRateHint" class="rate-hint">Oficial venta en tiempo real</small>
+              </div>
               <div><label>Dólar Correo / ARCA</label><input id="correoRate" type="number" step="0.01" value="0"></div>
               <div><label>Envío total USD</label><input id="shippingTotal" type="number" step="0.01" value="0"></div>
               <div><label>Redondear a $</label><input id="roundStep" type="number" step="1" value="500"></div>
@@ -1514,8 +1525,16 @@ body.dark .btn-secondary,body.dark .btn-ghost,body.dark .theme-toggle{
     </section>
 
     <section id="talles" class="panel card">
-      <h2>Guía de talles</h2>
-      <p class="sub">Medidas de referencia del proveedor. Todas las tablas usan la misma distribución; cuando un dato no está informado por el proveedor, aparece como “—”. Las medidas son manuales y pueden variar entre 2 y 3 cm.</p>
+      <div class="size-guide-head">
+        <div>
+          <h2>Guía de talles</h2>
+          <p class="sub">Medidas de referencia del proveedor. Todas las tablas usan la misma distribución; cuando un dato no está informado por el proveedor, aparece como “—”. Las medidas son manuales y pueden variar entre 2 y 3 cm.</p>
+        </div>
+        <div class="actions size-guide-actions">
+          <button id="copySizeTableBtn" class="btn btn-secondary" type="button">Copiar tarjeta PNG</button>
+          <button id="copyAllSizeTablesBtn" class="btn btn-ghost" type="button">Copiar todas PNG</button>
+        </div>
+      </div>
       <div class="size-guide-tabs" id="sizeGuideTabs">
         <button class="size-guide-tab active" data-size-guide="fan">Fan</button>
         <button class="size-guide-tab" data-size-guide="player">Player</button>
@@ -1611,6 +1630,24 @@ body.dark .btn-secondary,body.dark .btn-ghost,body.dark .theme-toggle{
   </div>
 
 
+  <div id="historyNameModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="historyNameTitle">
+    <div class="modal-card history-name-modal">
+      <div class="modal-head">
+        <div>
+          <h2 id="historyNameTitle">Nombre del pedido</h2>
+          <p class="sub" style="margin:4px 0 0">Poné un nombre para diferenciarlo en el historial.</p>
+        </div>
+        <button id="cancelHistoryNameBtn" class="btn btn-ghost btn-mini" type="button">Cerrar</button>
+      </div>
+      <label for="historyNameInput">Nombre</label>
+      <input id="historyNameInput" type="text" maxlength="80" placeholder="Ej: Pedido Franco · abril">
+      <div class="actions" style="justify-content:flex-end;margin-top:14px">
+        <button id="cancelHistoryNameBtn2" class="btn btn-secondary" type="button">Cancelar</button>
+        <button id="confirmHistoryNameBtn" class="btn btn-primary" type="button">Guardar</button>
+      </div>
+    </div>
+  </div>
+
   <div id="historyDetailModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="historyDetailTitle">
     <div class="modal-card history-detail-modal">
       <div class="modal-head">
@@ -1674,6 +1711,7 @@ let patchOptionsList = structuredClone(DEFAULT_PATCH_OPTIONS);
 const MAX_PRODUCTS = 7;
 const STATE_KEY = 'casacasClientCleanV31';
 const HISTORY_KEY = 'casacasClientCleanHistoryV31';
+const HISTORY_COLLAPSED_KEY = 'casacasHistoryCollapsedV1';
 const THEME_KEY = 'casacasClientCleanThemeV31';
 const UI_KEY = 'casacasClientCleanInterfaceV31';
 const AUTOSAVE_KEY = 'casacasClientCleanAutosaveV31';
@@ -2710,6 +2748,23 @@ function saveHistoryList(list){
   localStorage.setItem(HISTORY_KEY, JSON.stringify(cleanList));
   if(!cloudLoading) scheduleCloudAutosave();
 }
+function historyCollapsedIds(){
+  try{
+    const data=JSON.parse(localStorage.getItem(HISTORY_COLLAPSED_KEY)||'[]');
+    return new Set(Array.isArray(data)?data.map(String):[]);
+  }catch(e){ return new Set(); }
+}
+function saveHistoryCollapsedIds(ids){
+  localStorage.setItem(HISTORY_COLLAPSED_KEY, JSON.stringify([...ids]));
+}
+function isHistoryCollapsed(id){ return historyCollapsedIds().has(String(id)); }
+function toggleHistoryCollapsed(id){
+  const ids=historyCollapsedIds();
+  const key=String(id);
+  if(ids.has(key)) ids.delete(key); else ids.add(key);
+  saveHistoryCollapsedIds(ids);
+  return ids.has(key);
+}
 function historyImportPaid(h){ return !!(h&&h.importPaymentDone); }
 function historyImportAmount(h){ return Math.max(0,num(h&&((h.importTotalArs!==undefined&&h.importTotalArs!==null)?h.importTotalArs:h.importPaymentAmountArs))); }
 function historyItemPayment(h,index,totalArs=0){
@@ -2757,10 +2812,44 @@ function buildHistoryEntry(){
     state:getState()
   };
 }
+let historyNameResolver=null;
+function finishHistoryName(value){
+  $('historyNameModal')?.classList.add('hidden');
+  const resolve=historyNameResolver;
+  historyNameResolver=null;
+  if(resolve) resolve(value);
+}
+function askHistoryName(defaultName=''){
+  return new Promise(resolve=>{
+    const modal=$('historyNameModal');
+    const input=$('historyNameInput');
+    if(!modal || !input){ resolve(clean(defaultName)||null); return; }
+    historyNameResolver=resolve;
+    input.value=defaultName||'';
+    modal.classList.remove('hidden');
+    setTimeout(()=>{ input.focus(); input.select(); },40);
+  });
+}
+function applyHistoryName(id, rawName, inputEl){
+  const current=historyList().find(x=>x.id===id);
+  const fallback=current?.label||'Pedido';
+  const name=clean(rawName);
+  if(!name){
+    if(inputEl) inputEl.value=fallback;
+    return false;
+  }
+  if(name===fallback) return false;
+  updateHistoryEntry(id,h=>{ h.label=name; return h; }, {silent:true});
+  showToast('Nombre del pedido actualizado.');
+  return true;
+}
 async function saveCurrentToHistory(){
   const c=calculate();
   if(c.activeCount===0) return showToast('No hay productos para guardar.');
   const entry=buildHistoryEntry();
+  const named=await askHistoryName(entry.label);
+  if(named===null) return;
+  entry.label=clean(named)||entry.label;
   await persistLocalHistoryPhotos(entry);
   await uploadCloudHistoryPhotosFromEntry(entry);
   const list=historyList();
@@ -2894,9 +2983,9 @@ function renderHistory(){
     const date=h.createdAt?new Date(h.createdAt):null;
     const dateTxt=date && !isNaN(date) ? date.toLocaleString('es-AR',{dateStyle:'short',timeStyle:'short'}) : '-';
     const people=(h.people||[]).join(' · ');
-    return `<tr>
+    return `<tr class="${normalizeHistoryStatus(h.status)==='entregado'?'is-delivered':''}">
       <td>${esc(dateTxt)}</td>
-      <td><b>${esc(h.label||'Pedido')}</b><br><span class="muted">Declarado ${usd(h.declaredUsd||0)}</span></td>
+      <td><input class="history-name-input" data-id="${h.id}" value="${esc(h.label||'Pedido')}" placeholder="Nombre del pedido" maxlength="80" aria-label="Nombre del pedido"><br><span class="muted">Declarado ${usd(h.declaredUsd||0)}</span></td>
       <td>${historyStatusSelect(h)}<br><span class="status-chip ${historyStatusClass(h.status)}">${esc(historyStatusLabel(h.status))}</span></td>
       <td>${historyTrackingInput(h)}</td>
       <td>${historyImportPaymentControls(h)}</td>
@@ -2914,27 +3003,45 @@ function renderHistory(){
     const total=num(h.totalRevenue||0);
     const declared=usd(h.declaredUsd||0);
     const importCost=ars(h.importTotalArs||0);
-    return `<article class="history-card">
+    const collapsed=isHistoryCollapsed(h.id);
+    const delivered=normalizeHistoryStatus(h.status)==='entregado';
+    return `<article class="history-card${collapsed?' is-collapsed':''}${delivered?' is-delivered':''}" data-history-id="${h.id}">
       <div class="history-card-main">
         <div class="history-card-top">
-          <div>
-            <div class="history-card-id">${esc(shortHistoryId(h))} · ${h.items||0} productos</div>
-            <div class="history-card-title">${esc(h.label||'Pedido')}</div>
-            <div class="history-card-date">${esc(dateTxt)}</div>
+          <button type="button" class="history-collapse-btn" data-id="${h.id}" aria-expanded="${collapsed?'false':'true'}" aria-label="${collapsed?'Expandir pedido':'Minimizar pedido'}" title="${collapsed?'Expandir':'Minimizar'}">
+            <span class="history-collapse-arrow" aria-hidden="true"></span>
+          </button>
+          <div class="history-card-summary">
+            <div class="history-card-heading">
+              <div class="history-card-id" data-open-detail="${h.id}" title="Ver detalle del pedido">${esc(shortHistoryId(h))} · ${h.items||0} productos</div>
+              <label class="history-name-wrap">
+                <input class="history-name-input" data-id="${h.id}" value="${esc(h.label||'Pedido')}" placeholder="Nombre del pedido" maxlength="80" aria-label="Nombre del pedido">
+                <span class="history-name-edit-hint" aria-hidden="true">✎</span>
+              </label>
+              <div class="history-card-date" data-open-detail="${h.id}" title="Ver detalle del pedido">${esc(dateTxt)} <span class="history-card-tap-hint">· Tocá para ver el detalle</span></div>
+            </div>
+            <div class="history-card-top-end" data-open-detail="${h.id}" role="button" tabindex="0" title="Ver detalle del pedido">
+              <span class="status-chip ${historyStatusClass(h.status)}">${esc(historyStatusLabel(h.status))}</span>
+              <div class="history-card-collapsed-meta">
+                <strong>${ars(total)}</strong>
+                <span>${h.items||0} prod.</span>
+              </div>
+            </div>
           </div>
-          <span class="status-chip ${historyStatusClass(h.status)}">${esc(historyStatusLabel(h.status))}</span>
         </div>
-        <div class="history-card-people"><span>Personas:</span> ${esc(people)}</div>
-        <div class="history-chip-row">
-          <span class="history-mini-chip">Declarado ${declared}</span>
-          <span class="history-mini-chip">Importación ${importCost}</span>
-          <span class="history-mini-chip">Ganancia ${usd(h.totalProfitUsd||0)}</span>
-          <span class="history-mini-chip">${esc(historyImportSummary(h))}</span>
-        </div>
-        <div class="history-money-grid">
-          <div class="history-card-metric total"><small>Total venta</small><strong>${ars(total)}</strong></div>
-          <div class="history-card-metric profit"><small>Ganancia ARS</small><strong>${ars(h.totalProfitArs||0)}</strong></div>
-          <div class="history-card-metric"><small>Declarado</small><strong>${declared}</strong></div>
+        <div class="history-card-collapsible">
+          <div class="history-card-people"><span>Personas:</span> ${esc(people)}</div>
+          <div class="history-chip-row">
+            <span class="history-mini-chip">Declarado ${declared}</span>
+            <span class="history-mini-chip">Importación ${importCost}</span>
+            <span class="history-mini-chip">Ganancia ${usd(h.totalProfitUsd||0)}</span>
+            <span class="history-mini-chip">${esc(historyImportSummary(h))}</span>
+          </div>
+          <div class="history-money-grid">
+            <div class="history-card-metric total"><small>Total venta</small><strong>${ars(total)}</strong></div>
+            <div class="history-card-metric profit"><small>Ganancia ARS</small><strong>${ars(h.totalProfitArs||0)}</strong></div>
+            <div class="history-card-metric"><small>Declarado</small><strong>${declared}</strong></div>
+          </div>
         </div>
       </div>
       <div class="history-card-side">
@@ -2962,14 +3069,14 @@ function renderHistory(){
   }).join('');
   bindHistoryEvents();
 }
-function updateHistoryEntry(id, updater){
+function updateHistoryEntry(id, updater, opts={}){
   const list=historyList().map(h=>{
     if(h.id!==id) return h;
     const next=typeof updater==='function' ? updater({...h}) : {...h,...updater};
     return normalizeHistoryEntry(next);
   });
   saveHistoryList(list);
-  renderHistory();
+  if(!opts.silent) renderHistory();
 }
 function bindHistoryEvents(){
   document.querySelectorAll('.history-status-select').forEach(sel=>sel.onchange=()=>{
@@ -3009,6 +3116,33 @@ function bindHistoryEvents(){
     showToast('Estado de Declaración + Correo actualizado.');
   });
   document.querySelectorAll('.view-history').forEach(b=>b.onclick=()=>openHistoryDetail(b.dataset.id));
+  document.querySelectorAll('.history-collapse-btn').forEach(b=>b.onclick=e=>{
+    e.preventDefault();
+    e.stopPropagation();
+    const id=b.dataset.id;
+    const collapsed=toggleHistoryCollapsed(id);
+    const card=b.closest('.history-card');
+    if(card) card.classList.toggle('is-collapsed', collapsed);
+    b.setAttribute('aria-expanded', collapsed?'false':'true');
+    b.setAttribute('aria-label', collapsed?'Expandir pedido':'Minimizar pedido');
+    b.title=collapsed?'Expandir':'Minimizar';
+  });
+  document.querySelectorAll('[data-open-detail]').forEach(el=>{
+    const open=()=>openHistoryDetail(el.dataset.openDetail);
+    el.onclick=open;
+    el.onkeydown=e=>{
+      if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); }
+    };
+  });
+  document.querySelectorAll('.history-name-input').forEach(inp=>{
+    inp.onclick=e=>e.stopPropagation();
+    inp.onmousedown=e=>e.stopPropagation();
+    inp.onkeydown=e=>{
+      e.stopPropagation();
+      if(e.key==='Enter'){ e.preventDefault(); inp.blur(); }
+    };
+    inp.onchange=()=>applyHistoryName(inp.dataset.id, inp.value, inp);
+  });
   document.querySelectorAll('.load-history,.duplicate-history').forEach(b=>b.onclick=async()=>{
     const h=historyList().find(x=>x.id===b.dataset.id);
     if(!h) return;
@@ -3118,11 +3252,242 @@ async function clearHistory(){
   showToast('Historial borrado.');
 }
 function bindSizeGuideTabs(){
+  prepareSizeTables();
   document.querySelectorAll('.size-guide-tab').forEach(btn=>btn.onclick=()=>{
     const key=btn.dataset.sizeGuide;
     document.querySelectorAll('.size-guide-tab').forEach(b=>b.classList.toggle('active', b===btn));
     document.querySelectorAll('.size-guide-panel').forEach(p=>p.classList.toggle('active', p.dataset.sizePanel===key));
   });
+  if($('copySizeTableBtn')) $('copySizeTableBtn').onclick=()=>runSizeGuideCopy($('copySizeTableBtn'), false);
+  if($('copyAllSizeTablesBtn')) $('copyAllSizeTablesBtn').onclick=()=>runSizeGuideCopy($('copyAllSizeTablesBtn'), true);
+}
+function isEmptySizeCell(text){
+  const t=clean(text).replace(/\s/g,'');
+  return !t || t==='—' || t==='-' || t==='–' || t==='—';
+}
+function prepareSizeTables(){
+  document.querySelectorAll('#talles .size-table').forEach(table=>{
+    const headers=[...table.querySelectorAll('thead th')].map(th=>clean(th.textContent));
+    const rows=[...table.querySelectorAll('tbody tr')];
+    const emptyCols=headers.map((_,i)=>{
+      if(i===0) return false;
+      return rows.every(row=>isEmptySizeCell(row.children[i]?.textContent||''));
+    });
+    rows.forEach(row=>{
+      [...row.children].forEach((td,i)=>{
+        td.setAttribute('data-label', headers[i]||'');
+        if(isEmptySizeCell(td.textContent)) td.classList.add('is-empty');
+        if(emptyCols[i]) td.classList.add('is-empty-col');
+      });
+    });
+    [...table.querySelectorAll('thead th')].forEach((th,i)=>{
+      if(emptyCols[i]) th.classList.add('is-empty-col');
+    });
+  });
+}
+const SIZE_LABEL_SHORT={
+  'Talle':'Talle',
+  'Edad':'Edad',
+  'Largo de prenda':'Largo',
+  'Ancho / Pecho 1/2':'Pecho',
+  'Largo manga corta':'Manga C',
+  'Largo manga larga':'Manga L',
+  'Altura recomendada':'Altura',
+  'Peso recomendado':'Peso',
+  'Largo pantalón':'Pantalón'
+};
+function getSizeTableData(table){
+  const headers=[...table.querySelectorAll('thead th')].map(th=>clean(th.textContent));
+  const rows=[...table.querySelectorAll('tbody tr')].map(row=>[...row.children].map(td=>clean(td.textContent)));
+  const visible=headers.map((_,i)=>i===0 || rows.some(r=>!isEmptySizeCell(r[i]||'')));
+  return {
+    headers:headers.filter((_,i)=>visible[i]).map(h=>SIZE_LABEL_SHORT[h]||h),
+    rows:rows.map(r=>r.filter((_,i)=>visible[i]).map((v,i)=>i===0?v:(isEmptySizeCell(v)?'—':v)))
+  };
+}
+function collectSizeGuideTables(all=false){
+  const panels=all
+    ? [...document.querySelectorAll('#talles .size-guide-panel')]
+    : [document.querySelector('#talles .size-guide-panel.active')].filter(Boolean);
+  return panels.map(panel=>{
+    const table=panel.querySelector('.size-table');
+    if(!table) return null;
+    return {title:clean(panel.querySelector('h3')?.textContent)||'Guía de talles', ...getSizeTableData(table)};
+  }).filter(t=>t && t.rows.length);
+}
+function roundRectPath(ctx,x,y,w,h,r){
+  const radius=Math.min(r,w/2,h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+radius,y);
+  ctx.arcTo(x+w,y,x+w,y+h,radius);
+  ctx.arcTo(x+w,y+h,x,y+h,radius);
+  ctx.arcTo(x,y+h,x,y,radius);
+  ctx.arcTo(x,y,x+w,y,radius);
+  ctx.closePath();
+}
+function drawSizeTableBlock(ctx, table, x, y, width, headH, rowH){
+  const cols=table.headers.length;
+  const firstW=Math.max(110, width*(cols>6?0.12:0.16));
+  const restW=(width-firstW)/Math.max(1,cols-1);
+  const colW=table.headers.map((_,i)=>i===0?firstW:restW);
+  const tableH=headH+table.rows.length*rowH;
+  ctx.save();
+  roundRectPath(ctx,x,y,width,tableH,16);
+  ctx.clip();
+  ctx.fillStyle='#0a84ff';
+  ctx.fillRect(x,y,width,headH);
+  ctx.fillStyle='#ffffff';
+  ctx.font='800 20px Arial, sans-serif';
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  let cx=x;
+  table.headers.forEach((h,i)=>{
+    ctx.fillText(h, cx+colW[i]/2, y+headH/2);
+    cx+=colW[i];
+  });
+  table.rows.forEach((row,ri)=>{
+    const ry=y+headH+ri*rowH;
+    ctx.fillStyle=ri%2?'#f3f6fb':'#ffffff';
+    ctx.fillRect(x,ry,width,rowH);
+    cx=x;
+    row.forEach((cell,i)=>{
+      ctx.fillStyle=i===0?'#0071e3':'#1d1d1f';
+      ctx.font=i===0?'800 22px Arial, sans-serif':'700 18px Arial, sans-serif';
+      ctx.fillText(cell, cx+colW[i]/2, ry+rowH/2);
+      cx+=colW[i];
+    });
+  });
+  ctx.restore();
+  ctx.strokeStyle='rgba(0,113,227,.18)';
+  ctx.lineWidth=2;
+  roundRectPath(ctx,x,y,width,tableH,16);
+  ctx.stroke();
+  return tableH;
+}
+async function createSizeGuideCardBlob(tables){
+  if(!tables.length) return null;
+  const W=1080;
+  const pad=48;
+  const rowH=56;
+  const headH=58;
+  const blockGap=30;
+  const tableTitleH=50;
+  const topH=176;
+  const footerH=86;
+  const tablesH=tables.reduce((sum,t,i)=>sum+(i?blockGap:0)+(tables.length>1?tableTitleH:0)+headH+t.rows.length*rowH,0);
+  const H=topH+tablesH+footerH;
+  const scale=2;
+  const canvas=document.createElement('canvas');
+  canvas.width=W*scale;
+  canvas.height=H*scale;
+  const ctx=canvas.getContext('2d');
+  ctx.scale(scale,scale);
+  ctx.fillStyle='#e8eef6';
+  ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#ffffff';
+  roundRectPath(ctx,16,16,W-32,H-32,30);
+  ctx.fill();
+  ctx.fillStyle='#0071e3';
+  roundRectPath(ctx,16,16,W-32,140,30);
+  ctx.fill();
+  ctx.fillRect(16,86,W-32,70);
+  ctx.fillStyle='#ffffff';
+  ctx.textAlign='left';
+  ctx.textBaseline='alphabetic';
+  ctx.font='800 20px Arial, sans-serif';
+  ctx.fillText('GUÍA DE TALLES', pad, 62);
+  ctx.font='800 40px Arial, sans-serif';
+  ctx.fillText(tables.length===1?tables[0].title:'Todas las versiones', pad, 112);
+  ctx.font='600 20px Arial, sans-serif';
+  ctx.fillStyle='rgba(255,255,255,.86)';
+  ctx.fillText('Medidas de referencia del proveedor', pad, 144);
+  let y=topH;
+  tables.forEach((t,i)=>{
+    if(i) y+=blockGap;
+    if(tables.length>1){
+      ctx.fillStyle='#1d1d1f';
+      ctx.textAlign='left';
+      ctx.textBaseline='alphabetic';
+      ctx.font='800 26px Arial, sans-serif';
+      ctx.fillText(t.title, pad, y+30);
+      y+=tableTitleH;
+    }
+    y+=drawSizeTableBlock(ctx,t,pad,y,W-pad*2,headH,rowH);
+  });
+  ctx.fillStyle='#6e6e73';
+  ctx.textAlign='left';
+  ctx.textBaseline='alphabetic';
+  ctx.font='600 20px Arial, sans-serif';
+  ctx.fillText('Las medidas son manuales y pueden variar 2-3 cm.', pad, H-42);
+  return new Promise(resolve=>canvas.toBlob(resolve,'image/png',0.95));
+}
+function sizeGuideFileName(tables){
+  const slug=clean((tables.length===1?tables[0].title:'todas-las-versiones')).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  return `guia-talles-${slug||'tabla'}.png`;
+}
+async function downloadSizeGuideCard(tables){
+  const blob=await createSizeGuideCardBlob(tables);
+  if(!blob) return showToast('No pude crear la tarjeta.');
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=sizeGuideFileName(tables);
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  showToast('Tarjeta PNG descargada.');
+}
+async function shareSizeGuideCard(tables){
+  try{
+    const blob=await createSizeGuideCardBlob(tables);
+    if(!blob) return showToast('No pude crear la tarjeta.');
+    const file=new File([blob], sizeGuideFileName(tables), {type:'image/png'});
+    const title=tables.length===1?`Guía de talles — ${tables[0].title}`:'Guía de talles';
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({files:[file], title, text:title});
+      showToast('Tarjeta lista para compartir.');
+      return;
+    }
+    showToast('Tu navegador no permite compartir imágenes. Se descargará la tarjeta PNG.');
+    await downloadSizeGuideCard(tables);
+  }catch(e){
+    if(!String(e?.name||'').includes('Abort')) showToast('No se pudo compartir. Se descargará la tarjeta PNG.');
+    if(!String(e?.name||'').includes('Abort')) await downloadSizeGuideCard(tables);
+  }
+}
+async function copySizeGuideCard(all=false){
+  const tables=collectSizeGuideTables(all);
+  if(!tables.length) return showToast('No hay tabla para copiar.');
+  if(isMobileLike() && (!navigator.clipboard || typeof ClipboardItem==='undefined')){
+    showToast('En celular, si copiar no funciona, se abrirá compartir tarjeta.');
+    return shareSizeGuideCard(tables);
+  }
+  if(!navigator.clipboard || typeof ClipboardItem==='undefined'){
+    showToast('Tu navegador no permite copiar imágenes. Se descargará la tarjeta PNG.');
+    return downloadSizeGuideCard(tables);
+  }
+  try{
+    const blob=await createSizeGuideCardBlob(tables);
+    if(!blob) return showToast('No pude crear la tarjeta.');
+    await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]);
+    showToast(isMobileLike() ? 'Tarjeta PNG copiada. Pegala en WhatsApp.' : 'Tarjeta PNG copiada. Pegala con Ctrl+V.');
+  }catch(e){
+    if(isMobileLike()){
+      showToast('El celular bloqueó copiar imagen. Abro compartir.');
+      return shareSizeGuideCard(tables);
+    }
+    showToast('No pude copiar la tarjeta. Se descargará.');
+    return downloadSizeGuideCard(tables);
+  }
+}
+async function runSizeGuideCopy(btn, all=false){
+  if(!btn) return copySizeGuideCard(all);
+  const prev=btn.textContent;
+  btn.disabled=true;
+  btn.textContent='Creando…';
+  try{ await copySizeGuideCard(all); }
+  finally{ btn.disabled=false; btn.textContent=prev; }
 }
 
 function applyTheme(theme){
@@ -3512,6 +3877,57 @@ function showToast(txt){
   document.body.appendChild(toast);
   setTimeout(()=>{ toast.style.transition='opacity .2s ease'; toast.style.opacity='0'; setTimeout(()=>toast.remove(),200); },1800);
 }
+async function fetchOfficialDollarVenta(){
+  try{
+    const res=await fetch('https://dolarapi.com/v1/dolares/bolsa',{cache:'no-store'});
+    if(res.ok){
+      const data=await res.json();
+      const venta=num(data?.venta);
+      if(venta>0) return {venta,fecha:data.fechaActualizacion||''};
+    }
+  }catch(e){}
+  try{
+    const res=await fetch('https://api.bluelytics.com.ar/v2/latest',{cache:'no-store'});
+    if(res.ok){
+      const data=await res.json();
+      const venta=num(data?.oficial?.value_sell);
+      if(venta>0) return {venta,fecha:data.last_update||''};
+    }
+  }catch(e){}
+  throw new Error('No se pudo obtener el dólar oficial');
+}
+async function refreshOfficialRate(){
+  const btn=$('refreshOfficialRateBtn');
+  const input=$('officialRate');
+  if(!btn||!input) return;
+  btn.disabled=true;
+  const prevLabel=btn.textContent;
+  btn.textContent='Actualizando…';
+  try{
+    const {venta,fecha}=await fetchOfficialDollarVenta();
+    const ventaEntera=Math.ceil(venta);
+    input.value=String(ventaEntera);
+    input.dispatchEvent(new Event('input',{bubbles:true}));
+    clearTimeout(autosaveTimer);
+    await autosaveStateNow(false);
+    if(currentCloudUser){
+      clearTimeout(cloudTimer);
+      await saveCloudStateNow(false);
+    }
+    const hint=$('officialRateHint');
+    if(hint){
+      const when=fecha?new Date(fecha):new Date();
+      const time=Number.isNaN(when.getTime())?new Date():when;
+      hint.textContent=`Oficial venta: $ ${nf0.format(ventaEntera)} · ${time.toLocaleString('es-AR',{dateStyle:'short',timeStyle:'short'})}`;
+    }
+    showToast('Dólar venta actualizado: $ '+nf0.format(ventaEntera));
+  }catch(e){
+    showToast('No pude actualizar el dólar oficial.');
+  }finally{
+    btn.disabled=false;
+    btn.textContent=prevLabel;
+  }
+}
 function csvEsc(v){ const s=String(v??''); return /[";\n,]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }
 function download(name,content,type){ const blob=new Blob([content],{type:type||'text/plain;charset=utf-8'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(url),800); }
 function exportCsv(){
@@ -3539,6 +3955,7 @@ async function init(){
   renderKpis();
   renderUiSettings(); bindUiEvents(); bindPatchModalEvents(); bindCloudEvents(); bindSizeGuideTabs();
   ['officialRate','correoRate','shippingTotal','roundStep','profitBase','vatEnabled','taxMode','gestionArs','franquiciaUsd','hasFranchise','extraDeclared','manualDeclaredEnabled','manualDeclaredUsd','derechosManual','ivaManual','orderNote'].forEach(id=>$(id).addEventListener('input',renderItems));
+  if($('refreshOfficialRateBtn')) $('refreshOfficialRateBtn').onclick=refreshOfficialRate;
   $('addRowBtn').onclick=addProductRow;
   $('clearBtn').onclick=()=>{ if(confirm('¿Limpiar productos?')){ rows=[]; renderItems(); autosaveStateNow(false); } };
   $('saveBtn').onclick=()=>{ autosaveStateNow(true); showToast('Borrador guardado en este navegador.'); };
@@ -3550,6 +3967,16 @@ async function init(){
   ['historySearch','historyStatusFilter','historyDateFilter','historySort'].forEach(id=>{ const el=$(id); if(el) el.addEventListener(id==='historySearch'?'input':'change', renderHistory); });
   if($('closeHistoryDetailBtn')) $('closeHistoryDetailBtn').onclick=closeHistoryDetail;
   if($('historyDetailModal')) $('historyDetailModal').addEventListener('click',e=>{ if(e.target===$('historyDetailModal')) closeHistoryDetail(); });
+  const confirmNameBtn=$('confirmHistoryNameBtn');
+  const cancelName=()=>finishHistoryName(null);
+  if(confirmNameBtn) confirmNameBtn.onclick=()=>finishHistoryName(clean($('historyNameInput')?.value||''));
+  if($('cancelHistoryNameBtn')) $('cancelHistoryNameBtn').onclick=cancelName;
+  if($('cancelHistoryNameBtn2')) $('cancelHistoryNameBtn2').onclick=cancelName;
+  if($('historyNameModal')) $('historyNameModal').addEventListener('click',e=>{ if(e.target===$('historyNameModal')) cancelName(); });
+  if($('historyNameInput')) $('historyNameInput').addEventListener('keydown',e=>{
+    if(e.key==='Enter'){ e.preventDefault(); confirmNameBtn?.click(); }
+    if(e.key==='Escape') cancelName();
+  });
   $('themeToggle').onclick=toggleTheme;
   if($('addProductBtn')) $('addProductBtn').onclick=addCatalogProduct;
   $('resetCatalogBtn').onclick=()=>{ if(confirm('¿Vaciar catálogo completo? Se borran los productos, precios y márgenes cargados.')){ catalog=[]; rows.forEach(r=>r.version=''); renderCatalog(); renderItems(); } };
@@ -5991,6 +6418,13 @@ body.dark #historyDetailModal .history-pay-box small{
   }
 
   /* Configuración / Impuestos */
+  #configuracion .rate-field{
+    gap:8px !important;
+  }
+  #configuracion .rate-field .btn{
+    flex:0 0 auto !important;
+    min-width:108px !important;
+  }
   #configuracion .card,
   #impuestos .card,
   #catalogo.panel,
@@ -6237,3 +6671,347 @@ body.dark #historyDetailModal .history-pay-box small{
   }
 }
 </style>
+
+<style id="v77-historial-colapsable">
+/* v77: pedidos del historial minimizables con flecha y detalle al tocar */
+#historial .history-card-top{
+  display:flex !important;
+  align-items:flex-start !important;
+  justify-content:flex-start !important;
+  gap:10px !important;
+}
+#historial .history-collapse-btn{
+  flex:0 0 auto;
+  width:36px;
+  height:36px;
+  margin-top:2px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:rgba(255,255,255,.92);
+  color:var(--text);
+  cursor:pointer;
+  display:grid;
+  place-items:center;
+  padding:0;
+  box-shadow:0 4px 10px rgba(0,0,0,.06);
+}
+#historial .history-collapse-arrow{
+  width:8px;
+  height:8px;
+  border-right:2.4px solid currentColor;
+  border-bottom:2.4px solid currentColor;
+  transform:rotate(-135deg);
+  margin-top:3px;
+  transition:transform .18s ease;
+}
+#historial .history-card-summary{
+  flex:1 1 auto;
+  min-width:0;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  border-radius:14px;
+  padding:2px 4px 2px 0;
+}
+#historial .history-card-heading{
+  min-width:0;
+  flex:1 1 auto;
+}
+#historial .history-card-summary [data-open-detail]{
+  cursor:pointer;
+}
+#historial .history-name-wrap{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  cursor:text;
+  margin:2px 0 4px;
+}
+#historial .history-name-input{
+  width:100% !important;
+  min-height:34px !important;
+  border:1px solid transparent !important;
+  border-radius:10px !important;
+  background:transparent !important;
+  box-shadow:none !important;
+  font-weight:900 !important;
+  font-size:18px !important;
+  letter-spacing:-.035em !important;
+  padding:4px 8px 4px 0 !important;
+  color:inherit !important;
+}
+#historial .history-name-input:hover,
+#historial .history-name-input:focus{
+  border-color:var(--line) !important;
+  background:var(--card-solid) !important;
+  padding-left:8px !important;
+}
+#historial .history-name-edit-hint{
+  flex:0 0 auto;
+  color:var(--muted);
+  font-size:14px;
+  opacity:.7;
+}
+#historial .history-card.is-collapsed .history-name-input{
+  font-size:16px !important;
+  min-height:30px !important;
+}
+#historial .history-card-top-end{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+#historial .history-card-collapsed-meta,
+#historial .history-card-tap-hint{
+  display:none;
+}
+#historial .history-card.is-collapsed{
+  grid-template-columns:1fr !important;
+}
+#historial .history-card.is-collapsed .history-card-main{
+  padding:12px 14px !important;
+}
+#historial .history-card.is-collapsed .history-card-top,
+#historial .history-card.is-collapsed .history-card-summary{
+  align-items:center !important;
+}
+#historial .history-card.is-collapsed .history-card-id{
+  margin-bottom:4px;
+}
+#historial .history-card.is-collapsed .history-card-title{
+  font-size:16px;
+}
+#historial .history-card.is-collapsed .history-collapse-arrow{
+  transform:rotate(45deg);
+  margin-top:-2px;
+}
+#historial .history-card.is-collapsed .history-card-collapsible,
+#historial .history-card.is-collapsed .history-card-side{
+  display:none !important;
+}
+#historial .history-card.is-collapsed .history-card-tap-hint{
+  display:inline;
+  color:var(--muted);
+  font-weight:700;
+}
+#historial .history-card.is-collapsed .history-card-collapsed-meta{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:1px;
+  line-height:1.15;
+}
+#historial .history-card.is-collapsed .history-card-collapsed-meta strong{
+  font-size:15px;
+  letter-spacing:-.03em;
+}
+#historial .history-card.is-collapsed .history-card-collapsed-meta span{
+  font-size:11px;
+  color:var(--muted);
+  font-weight:800;
+}
+body.dark #historial .history-collapse-btn{
+  background:#2c2c2e;
+  border-color:#3a3a3c;
+  color:#f5f5f7;
+}
+body.dark #historial .history-name-input:hover,
+body.dark #historial .history-name-input:focus{
+  background:#2c2c2e !important;
+  border-color:#3a3a3c !important;
+}
+@media (max-width:760px){
+  #historial .history-card-summary{
+    flex-wrap:wrap;
+  }
+  #historial .history-card-top-end{
+    width:100%;
+    justify-content:flex-start;
+  }
+  #historial .history-card.is-collapsed .history-card-collapsed-meta{
+    margin-left:auto;
+    align-items:flex-end;
+  }
+}
+</style>
+
+<style id="v78-historial-entregado-verde">
+/* v78: pedidos entregados se distinguen con fondo verde */
+#historial .history-card.is-delivered,
+#historial .history-card.is-delivered .history-card-main,
+#historial .history-card.is-delivered .history-card-side{
+  background:linear-gradient(135deg,#e8f8ee,#d8f3e2) !important;
+  border-color:rgba(52,199,89,.38) !important;
+}
+#historial .history-card.is-delivered{
+  box-shadow:0 12px 30px rgba(52,199,89,.16) !important;
+}
+#historial .history-card.is-delivered .history-card-side{
+  background:#d4efdd !important;
+  border-left-color:rgba(52,199,89,.28) !important;
+}
+#historial .history-card.is-delivered .history-card-metric,
+#historial .history-card.is-delivered .history-mini-chip,
+#historial .history-card.is-delivered .history-import-check,
+#historial .history-card.is-delivered .history-import-fixed{
+  background:rgba(255,255,255,.72) !important;
+  border-color:rgba(52,199,89,.22) !important;
+}
+#historial .history-table-shell tr.is-delivered td{
+  background:#e8f8ee !important;
+}
+body.dark #historial .history-card.is-delivered,
+body.dark #historial .history-card.is-delivered .history-card-main,
+body.dark #historial .history-card.is-delivered .history-card-side{
+  background:linear-gradient(135deg,#163322,#12402a) !important;
+  border-color:rgba(52,199,89,.42) !important;
+  color:#f5f5f7 !important;
+}
+body.dark #historial .history-card.is-delivered .history-card-side{
+  background:#133526 !important;
+  border-left-color:rgba(52,199,89,.28) !important;
+}
+body.dark #historial .history-card.is-delivered .history-card-metric,
+body.dark #historial .history-card.is-delivered .history-mini-chip,
+body.dark #historial .history-card.is-delivered .history-import-check,
+body.dark #historial .history-card.is-delivered .history-import-fixed{
+  background:rgba(15,40,28,.72) !important;
+  border-color:rgba(52,199,89,.28) !important;
+  color:#f5f5f7 !important;
+}
+body.dark #historial .history-table-shell tr.is-delivered td{
+  background:#163322 !important;
+}
+</style>
+
+<style id="v79-talles-mobile-copiar">
+/* v79: guía de talles usable en celular + copiar como texto */
+#talles .size-guide-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+  margin-bottom:4px;
+}
+#talles .size-guide-head h2{margin-bottom:6px;}
+#talles .size-guide-head .sub{margin-bottom:0;max-width:720px;}
+#talles .size-guide-actions{
+  flex:0 0 auto;
+  margin:0;
+  justify-content:flex-end;
+}
+#talles .size-table{
+  min-width:0 !important;
+  width:100% !important;
+}
+#talles .size-table .is-empty-col{
+  display:none !important;
+}
+
+@media (max-width:900px){
+  #talles .size-guide-head{
+    flex-direction:column;
+    align-items:stretch;
+  }
+  #talles .size-guide-actions{
+    display:grid !important;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    width:100%;
+  }
+  #talles .size-guide-actions .btn{
+    width:100%;
+    min-height:44px;
+  }
+  #talles .size-guide-tabs{
+    display:flex !important;
+    flex-wrap:wrap !important;
+    overflow:visible !important;
+    gap:8px !important;
+  }
+  #talles .size-guide-tab{
+    flex:1 1 calc(50% - 8px) !important;
+    min-width:0 !important;
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+  }
+  #talles .size-table-shell{
+    overflow:visible !important;
+    border:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+  }
+  #talles .size-table,
+  #talles .size-table thead,
+  #talles .size-table tbody,
+  #talles .size-table tr,
+  #talles .size-table th,
+  #talles .size-table td{
+    display:block !important;
+    width:100% !important;
+    min-width:0 !important;
+  }
+  #talles .size-table thead{display:none !important;}
+  #talles .size-table tbody{
+    display:flex !important;
+    flex-direction:column !important;
+    gap:10px !important;
+  }
+  #talles .size-table tbody tr{
+    display:grid !important;
+    grid-template-columns:1fr 1fr !important;
+    gap:8px 12px !important;
+    border:1px solid var(--line) !important;
+    border-radius:16px !important;
+    background:var(--card-solid) !important;
+    padding:12px !important;
+    box-sizing:border-box !important;
+  }
+  #talles .size-table tbody td{
+    border:0 !important;
+    padding:0 !important;
+    background:transparent !important;
+    text-align:left !important;
+    font-size:14px !important;
+    font-weight:800 !important;
+  }
+  #talles .size-table tbody td.is-empty,
+  #talles .size-table tbody td.is-empty-col{
+    display:none !important;
+  }
+  #talles .size-table tbody td:first-child{
+    grid-column:1 / -1 !important;
+    font-size:20px !important;
+    letter-spacing:-.03em !important;
+    padding-bottom:8px !important;
+    margin-bottom:2px !important;
+    border-bottom:1px solid var(--line-soft) !important;
+  }
+  #talles .size-table tbody td::before{
+    content:attr(data-label);
+    display:block;
+    font-size:10px;
+    font-weight:800;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:3px;
+  }
+  body.dark #talles .size-table tbody tr{
+    background:#1f2025 !important;
+    border-color:#343741 !important;
+  }
+}
+@media (max-width:480px){
+  #talles .size-guide-actions{
+    grid-template-columns:1fr !important;
+  }
+}
+</style>
+
+
+
