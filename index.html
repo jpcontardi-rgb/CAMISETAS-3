@@ -1826,7 +1826,23 @@ function sanitizeCatalog(list){
   return cleanList.length?cleanList:structuredClone(DEFAULT_CATALOG);
 }
 function productOptions(selected){ return '<option value=""></option>'+catalog.filter(p=>has(p.name)).map(p=>`<option value="${esc(p.name)}" ${p.name===selected?'selected':''}>${esc(p.name)}</option>`).join(''); }
-function sizeOptions(selected){ return ['','S','M','L','XL','XXL','3XL','4XL'].map(s=>`<option value="${s}" ${s===selected?'selected':''}>${s||''}</option>`).join(''); }
+const ADULT_SIZES = ['S','M','L','XL','XXL','3XL','4XL'];
+const KIDS_SIZES = ['16#','18#','20#','22#','24#','26#','28#'];
+function versionKey(version){
+  return clean(version).toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+function isKidsVersion(version){
+  const v=versionKey(version).replace(/[^A-Z0-9]+/g,' ');
+  return /(?:^|\s)(KIDS|NIN[OA]S?|INFANTIL)(?:\s|$)/.test(v);
+}
+function sizesForVersion(version){
+  return isKidsVersion(version) ? KIDS_SIZES : ADULT_SIZES;
+}
+function sizeOptions(selected, version){
+  const list=['',...sizesForVersion(version)];
+  if(has(selected) && !list.includes(selected)) list.push(selected);
+  return list.map(s=>`<option value="${esc(s)}" ${s===selected?'selected':''}>${esc(s)}</option>`).join('');
+}
 function patchName(p){ return typeof p==='string' ? clean(p) : clean(p?.name ?? p?.label ?? p?.patch ?? ''); }
 function normalizePatchOptions(list){
   const out=[];
@@ -1998,7 +2014,7 @@ function mobileItemCard(r,i){
         </div>
         <div class="mobile-field">
           <label>Talle</label>
-          <select data-row="${i}" data-field="size">${sizeOptions(r.size)}</select>
+          <select data-row="${i}" data-field="size">${sizeOptions(r.size, r.version)}</select>
         </div>
         <div class="mobile-field">
           <label>Número</label>
@@ -2042,7 +2058,7 @@ function renderItems(){
       <td class="col-lite"><input value="${esc(r.person)}" data-row="${i}" data-field="person" placeholder="Persona"></td>
       <td><select data-row="${i}" data-field="version">${productOptions(r.version)}</select></td>
       <td>${photoCell(r,i,true)}</td>
-      <td><select data-row="${i}" data-field="size">${sizeOptions(r.size)}</select></td>
+      <td><select data-row="${i}" data-field="size">${sizeOptions(r.size, r.version)}</select></td>
       <td><input value="${esc(r.number)}" data-row="${i}" data-field="number" placeholder="N°"></td>
       <td><input value="${esc(r.name)}" data-row="${i}" data-field="name" placeholder="Nombre"></td>
       <td>${patchPickerButton(r.patch,i)}</td>
@@ -2164,6 +2180,10 @@ function rowChange(e){
   const i=Number(e.target.dataset.row), f=e.target.dataset.field;
   if(!rows[i]) return;
   rows[i][f]=e.target.type==='checkbox'?e.target.checked:e.target.value;
+  if(f==='version'){
+    const allowed=sizesForVersion(rows[i].version);
+    if(has(rows[i].size) && !allowed.includes(rows[i].size)) rows[i].size='';
+  }
   if(shouldKeepFocusWhileTyping(e.target)){
     refreshLiveCalculations();
   }else{
